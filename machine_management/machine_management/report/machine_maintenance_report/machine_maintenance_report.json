@@ -1,0 +1,106 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [
+  {
+   "fieldname": "machine_name",
+   "fieldtype": "Link",
+   "label": "Machine",
+   "width": 0
+  },
+  {
+   "fieldname": "maintenance_date",
+   "fieldtype": "Date",
+   "label": "Maintenance Date",
+   "width": 0
+  },
+  {
+   "fieldname": "technician",
+   "fieldtype": "Link",
+   "label": "Technician",
+   "width": 0
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "width": 0
+  },
+  {
+   "fieldname": "cost",
+   "fieldtype": "Currency",
+   "label": " Totol Cost",
+   "width": 0
+  },
+  {
+   "fieldname": "consolidated",
+   "fieldtype": "Check",
+   "label": "Consolidated",
+   "width": 0
+  }
+ ],
+ "creation": "2026-01-01 00:38:11.829552",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [
+  {
+   "fieldname": "machine_name",
+   "fieldtype": "Link",
+   "label": "Machine",
+   "mandatory": 0,
+   "options": "Item",
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "technician",
+   "fieldtype": "Link",
+   "label": "Technician",
+   "mandatory": 0,
+   "options": "Employee",
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "mandatory": 0,
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "mandatory": 0,
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "consolidated",
+   "fieldtype": "Check",
+   "label": "consolidated ",
+   "mandatory": 0,
+   "wildcard_filter": 0
+  }
+ ],
+ "idx": 0,
+ "is_standard": "Yes",
+ "javascript": "frappe.query_reports[\"Machine Maintenance Report\"] = {\n    get_formatter: function(report) {\n        let formatter = report.standard_formatters;\n        return function(value, row, column, data, default_formatter) {\n            let formatted = default_formatter(value, row, column, data);\n\n            // Apply colors only if not consolidated\n            if (!data.consolidated) {\n                if (data.status === \"Overdue\") {\n                    formatted = `<span style=\"background-color: red; color: white; padding:2px 5px;\">${formatted}</span>`;\n                } else if (data.status === \"Scheduled\") {\n                    formatted = `<span style=\"background-color: yellow; color: black; padding:2px 5px;\">${formatted}</span>`;\n                } else if (data.status === \"Completed\") {\n                    formatted = `<span style=\"background-color: green; color: white; padding:2px 5px;\">${formatted}</span>`;\n                }\n            }\n\n            return formatted;\n        }\n    }\n};\n",
+ "letter_head": null,
+ "modified": "2026-01-01 01:58:12.929101",
+ "modified_by": "Administrator",
+ "module": "Machine Management",
+ "name": "Machine Maintenance Report",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Machine Maintenance",
+ "reference_report": "",
+ "report_name": "Machine Maintenance Report",
+ "report_script": "\ndef execute(filters=None):\n    if not filters:\n        filters = {}\n\n    # Columns for the report\n    columns = [\n        {\"label\": \"Machine\", \"fieldname\": \"machine_name\", \"fieldtype\": \"Link\", \"options\":\"Item\", \"width\": 150},\n        {\"label\": \"Maintenance Date\", \"fieldname\": \"maintenance_date\", \"fieldtype\": \"Date\", \"width\": 120},\n        {\"label\": \"Technician\", \"fieldname\": \"technician\", \"fieldtype\": \"Link\", \"options\":\"Employee\", \"width\": 150},\n        {\"label\": \"Status\", \"fieldname\": \"status\", \"fieldtype\": \"Data\", \"width\": 100},\n        {\"label\": \"Cost\", \"fieldname\": \"cost\", \"fieldtype\": \"Currency\", \"width\": 120},\n        {\"label\": \"Consolidated\", \"fieldname\": \"consolidated\", \"fieldtype\": \"Check\", \"width\": 100},\n    ]\n\n    # Build conditions based on filters\n    conditions = []\n    if filters.get(\"machine_name\"):\n        conditions.append(\"machine_name = '{}'\".format(filters.get(\"machine_name\")))\n    if filters.get(\"technician\"):\n        conditions.append(\"technician = '{}'\".format(filters.get(\"technician\")))\n    if filters.get(\"from_date\"):\n        conditions.append(\"maintenance_date >= '{}'\".format(filters.get(\"from_date\")))\n    if filters.get(\"to_date\"):\n        conditions.append(\"maintenance_date <= '{}'\".format(filters.get(\"to_date\")))\n\n    where_clause = \" AND \".join(conditions) if conditions else \"1=1\"\n\n    # Consolidated checkbox\n    consolidated_flag = int(filters.get(\"consolidated\") or 0)\n\n    if consolidated_flag:\n        # Group by machine_name and sum cost\n        data = frappe.db.sql(\"\"\"\n            SELECT\n                machine_name,\n                NULL AS maintenance_date,\n                NULL AS technician,\n                NULL AS status,\n                SUM(cost) AS cost,\n                1 AS consolidated\n            FROM `tabMachine Maintenance`\n            WHERE {where_clause}\n            GROUP BY machine_name\n        \"\"\".format(where_clause=where_clause), as_dict=True)\n    else:\n        # Show individual maintenance entries\n        data = frappe.db.sql(\"\"\"\n            SELECT\n                machine_name,\n                maintenance_date,\n                technician,\n                status,\n                cost,\n                0 AS consolidated\n            FROM `tabMachine Maintenance`\n            WHERE {where_clause}\n            ORDER BY maintenance_date DESC\n        \"\"\".format(where_clause=where_clause), as_dict=True)\n\n    return columns, data\n",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Administrator"
+  }
+ ],
+ "timeout": 0
+}
